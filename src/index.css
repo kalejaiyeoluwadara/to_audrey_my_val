@@ -26,9 +26,11 @@
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
   background: linear-gradient(135deg, var(--soft-black) 0%, var(--plum-dark) 50%, var(--wine-dark) 100%);
   color: var(--warm-cream);
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Elegant serif font for headings */
@@ -47,6 +49,14 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+/* Mobile-optimized glass card */
+@media (max-width: 640px) {
+  .glass-card {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
 /* Glow effects */
 .glow-soft {
   box-shadow: 0 0 40px rgba(248, 200, 220, 0.3);
@@ -56,11 +66,17 @@ body {
   text-shadow: 0 0 30px rgba(248, 200, 220, 0.5);
 }
 
+@media (max-width: 640px) {
+  .text-glow {
+    text-shadow: 0 0 20px rgba(248, 200, 220, 0.4);
+  }
+}
+
 .text-glow-gold {
   text-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
 }
 
-/* Cursor glow effect */
+/* Cursor glow effect - hidden on touch devices */
 .cursor-glow {
   position: fixed;
   width: 300px;
@@ -74,18 +90,32 @@ body {
   transition: opacity 0.3s ease;
 }
 
+@media (hover: none) and (pointer: coarse) {
+  .cursor-glow {
+    display: none !important;
+  }
+}
+
 /* Scroll progress indicator */
 .scroll-progress {
   position: fixed;
-  left: 20px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 200px;
+  height: 150px;
   background: rgba(255, 245, 225, 0.1);
   border-radius: 3px;
   z-index: 1000;
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .scroll-progress {
+    left: 8px;
+    height: 100px;
+    width: 2px;
+  }
 }
 
 .scroll-progress-fill {
@@ -130,6 +160,14 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Touch-friendly tap targets */
+@media (hover: none) and (pointer: coarse) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 /* Animation keyframes */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
@@ -159,4 +197,29 @@ html {
 
 .animate-heartbeat {
   animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+/* Mobile viewport fix */
+@supports (height: 100dvh) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

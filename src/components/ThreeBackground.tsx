@@ -1,8 +1,24 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, Noise } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { useMousePosition } from '../hooks/useMousePosition';
+
+// Hook to detect mobile devices
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
 
 // Floating particles component
 function FloatingParticles({ count = 500 }: { count?: number }) {
@@ -223,43 +239,52 @@ function CameraController() {
 }
 
 // Main scene component
-function Scene() {
+function Scene({ isMobile }: { isMobile: boolean }) {
+  // Reduce counts on mobile for better performance
+  const particleCount = isMobile ? 200 : 600;
+  const orbCount = isMobile ? 10 : 25;
+
   return (
     <>
       <color attach="background" args={['#0D0A0B']} />
       <fog attach="fog" args={['#0D0A0B', 5, 30]} />
       
       <CameraController />
-      <FloatingParticles count={600} />
-      <BokehOrbs count={25} />
+      <FloatingParticles count={particleCount} />
+      <BokehOrbs count={orbCount} />
       <LightFlares />
 
-      <EffectComposer>
-        <Bloom
-          luminanceThreshold={0.1}
-          luminanceSmoothing={0.9}
-          intensity={1.5}
-          mipmapBlur
-        />
-        <Noise opacity={0.02} />
-      </EffectComposer>
+      {/* Only render postprocessing on desktop for better mobile performance */}
+      {!isMobile && (
+        <EffectComposer>
+          <Bloom
+            luminanceThreshold={0.1}
+            luminanceSmoothing={0.9}
+            intensity={1.5}
+            mipmapBlur
+          />
+          <Noise opacity={0.02} />
+        </EffectComposer>
+      )}
     </>
   );
 }
 
 export const ThreeBackground = () => {
+  const isMobile = useIsMobile();
+
   return (
     <div className="fixed inset-0 -z-10">
       <Canvas
         camera={{ position: [0, 0, 5], fov: 60 }}
         gl={{
-          antialias: true,
+          antialias: !isMobile,
           alpha: true,
           powerPreference: 'high-performance',
         }}
-        dpr={[1, 2]}
+        dpr={isMobile ? 1 : [1, 2]}
       >
-        <Scene />
+        <Scene isMobile={isMobile} />
       </Canvas>
     </div>
   );

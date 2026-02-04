@@ -62,10 +62,10 @@ function App() {
         </main>
 
         {/* Gradient overlays for depth */}
-        <div className="fixed inset-0 pointer-events-none z-0">
+        {/* <div className="fixed inset-0 pointer-events-none z-0">
           <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#0D0A0B] to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0D0A0B] to-transparent" />
-        </div>
+        </div> */}
       </motion.div>
     </AnimatePresence>
   );

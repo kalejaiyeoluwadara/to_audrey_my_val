@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo, useCallback } from 'react';
+import { useRef, useState, useMemo, useCallback, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { motion, useInView } from 'framer-motion';
 import * as THREE from 'three';
@@ -39,13 +39,12 @@ interface RisingHeart {
   y: number;
 }
 
-function HeartParticles({ onClick }: { onClick: () => void }) {
+function HeartParticles({ particleCount }: { particleCount: number }) {
   const mesh = useRef<THREE.Points>(null);
-  const count = 800;
 
   const { positions, colors } = useMemo(() => {
-    const positions = generateHeartPoints(count);
-    const colors = new Float32Array(count * 3);
+    const positions = generateHeartPoints(particleCount);
+    const colors = new Float32Array(particleCount * 3);
 
     const colorPalette = [
       new THREE.Color('#F8C8DC'),
@@ -53,7 +52,7 @@ function HeartParticles({ onClick }: { onClick: () => void }) {
       new THREE.Color('#D4AF37'),
     ];
 
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < particleCount; i++) {
       const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
@@ -61,7 +60,7 @@ function HeartParticles({ onClick }: { onClick: () => void }) {
     }
 
     return { positions, colors };
-  }, []);
+  }, [particleCount]);
 
   useFrame((state) => {
     if (mesh.current) {
@@ -76,9 +75,9 @@ function HeartParticles({ onClick }: { onClick: () => void }) {
 
       // Update particle positions for breathing effect
       const posAttr = mesh.current.geometry.attributes.position;
-      const basePositions = generateHeartPoints(count);
+      const basePositions = generateHeartPoints(particleCount);
 
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < particleCount; i++) {
         const i3 = i * 3;
         const wave = Math.sin(time * 0.5 + i * 0.01) * 0.02;
         posAttr.array[i3] = basePositions[i3] + wave;
@@ -90,7 +89,7 @@ function HeartParticles({ onClick }: { onClick: () => void }) {
   });
 
   return (
-    <points ref={mesh} onClick={onClick}>
+    <points ref={mesh}>
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
@@ -102,7 +101,7 @@ function HeartParticles({ onClick }: { onClick: () => void }) {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={0.08}
+        size={0.1}
         vertexColors
         transparent
         opacity={0.9}
@@ -118,17 +117,17 @@ function HeartParticles({ onClick }: { onClick: () => void }) {
 const MiniHeart = ({ x, y, onComplete }: { x: number; y: number; onComplete: () => void }) => {
   return (
     <motion.div
-      className="absolute text-[#F8C8DC] text-2xl pointer-events-none select-none"
+      className="fixed text-[#F8C8DC] text-xl sm:text-2xl pointer-events-none select-none z-50"
       style={{ left: x, top: y }}
       initial={{ opacity: 1, y: 0, scale: 0.5 }}
       animate={{
         opacity: 0,
-        y: -150,
-        scale: 1.5,
-        x: (Math.random() - 0.5) * 100,
+        y: -120,
+        scale: 1.3,
+        x: (Math.random() - 0.5) * 80,
       }}
       transition={{
-        duration: 2,
+        duration: 1.5,
         ease: 'easeOut',
       }}
       onAnimationComplete={onComplete}
@@ -140,32 +139,58 @@ const MiniHeart = ({ x, y, onComplete }: { x: number; y: number; onComplete: () 
 
 export const HeartCenterpiece = () => {
   const sectionRef = useRef(null);
-  const isInView = useInView(sectionRef, { once: true, margin: '-100px' });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(sectionRef, { once: true, margin: '-50px' });
   const [risingHearts, setRisingHearts] = useState<RisingHeart[]>([]);
   const nextHeartId = useRef(0);
   const { name } = useUrlParams();
+  const [isMobile, setIsMobile] = useState(false);
 
-  const handleHeartClick = useCallback(() => {
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleHeartClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Get click/touch position
+    let clientX: number, clientY: number;
+    
+    if ('touches' in e) {
+      clientX = e.touches[0]?.clientX || window.innerWidth / 2;
+      clientY = e.touches[0]?.clientY || window.innerHeight / 2;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
     // Add multiple rising hearts
     const newHearts: RisingHeart[] = [];
-    for (let i = 0; i < 5; i++) {
+    const heartCount = isMobile ? 3 : 5;
+    for (let i = 0; i < heartCount; i++) {
       newHearts.push({
         id: nextHeartId.current++,
-        x: window.innerWidth / 2 + (Math.random() - 0.5) * 200,
-        y: window.innerHeight / 2 + (Math.random() - 0.5) * 100,
+        x: clientX + (Math.random() - 0.5) * 100,
+        y: clientY + (Math.random() - 0.5) * 60,
       });
     }
     setRisingHearts((prev) => [...prev, ...newHearts]);
-  }, []);
+  }, [isMobile]);
 
   const removeHeart = useCallback((id: number) => {
     setRisingHearts((prev) => prev.filter((h) => h.id !== id));
   }, []);
 
+  // Reduce particle count on mobile for performance
+  const particleCount = isMobile ? 400 : 800;
+
   return (
-    <section ref={sectionRef} className="min-h-screen flex flex-col items-center justify-center relative px-6 py-24">
+    <section ref={sectionRef} className="min-h-screen flex flex-col items-center justify-center relative px-4 sm:px-6 py-16 sm:py-24">
       <motion.h2
-        className="font-elegant text-3xl sm:text-4xl md:text-5xl text-[#FFF5E1] text-glow text-center mb-8 z-10"
+        className="font-elegant text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-[#FFF5E1] text-glow text-center mb-6 sm:mb-8 z-10"
         initial={{ opacity: 0, y: 30 }}
         animate={isInView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
@@ -175,18 +200,21 @@ export const HeartCenterpiece = () => {
 
       {/* 3D Heart Canvas */}
       <motion.div
-        className="w-full max-w-lg h-[50vh] relative cursor-pointer"
+        ref={containerRef}
+        className="w-full max-w-md sm:max-w-lg h-[45vh] sm:h-[50vh] relative cursor-pointer touch-manipulation"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={isInView ? { opacity: 1, scale: 1 } : {}}
         transition={{ duration: 1.5, delay: 0.3 }}
         onClick={handleHeartClick}
+        onTouchStart={handleHeartClick}
       >
         <Canvas
           camera={{ position: [0, 0, 5], fov: 50 }}
-          gl={{ antialias: true, alpha: true }}
+          gl={{ antialias: !isMobile, alpha: true, powerPreference: 'high-performance' }}
+          dpr={isMobile ? 1 : [1, 2]}
         >
           <ambientLight intensity={0.5} />
-          <HeartParticles onClick={handleHeartClick} />
+          <HeartParticles particleCount={particleCount} />
         </Canvas>
 
         {/* Central message */}
@@ -197,7 +225,7 @@ export const HeartCenterpiece = () => {
           transition={{ duration: 1, delay: 1 }}
         >
           <motion.p
-            className="font-elegant text-xl sm:text-2xl md:text-3xl text-[#FFF5E1] text-center px-8 text-glow"
+            className="font-elegant text-lg sm:text-xl md:text-2xl lg:text-3xl text-[#FFF5E1] text-center px-6 sm:px-8 text-glow"
             animate={{
               opacity: [0.7, 1, 0.7],
             }}
@@ -213,7 +241,7 @@ export const HeartCenterpiece = () => {
 
         {/* Click hint */}
         <motion.p
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[#D4AF37] text-sm tracking-wider opacity-50"
+          className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 text-[#D4AF37] text-xs sm:text-sm tracking-wider opacity-50"
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 0.5 } : {}}
           transition={{ duration: 1, delay: 1.5 }}
@@ -234,7 +262,7 @@ export const HeartCenterpiece = () => {
 
       {/* Ambient glow */}
       <motion.div
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-64 sm:w-80 md:w-96 h-64 sm:h-80 md:h-96 rounded-full pointer-events-none"
         style={{
           background: 'radial-gradient(circle, rgba(139, 30, 63, 0.2) 0%, transparent 70%)',
         }}

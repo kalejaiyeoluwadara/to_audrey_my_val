@@ -5,7 +5,7 @@ export const ScrollProgress = () => {
   const progress = useScrollProgress();
 
   return (
-    <div className="scroll-progress hidden md:block">
+    <div className="scroll-progress">
       <motion.div
         className="scroll-progress-fill"
         style={{ height: `${progress}%` }}
