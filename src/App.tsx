@@ -12,7 +12,7 @@ const letters = [
   },
   {
     heading: 'No Competion for my Baby',
-    body: 'Who, where, it"s you or nobody babe, nobody can compare to you.I most definitely miss you when I am away from you haven"t felt this way in ages.',
+    body: "Who, where, it's you or nobody babe, nobody can compare to you.I most definitely miss you when I am away from you, haven't felt this way in ages.",
     variant: 'slide-left' as const,
     align: 'left' as const,
   },
